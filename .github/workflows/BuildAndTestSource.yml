@@ -23,7 +23,23 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
+    - name: Set up SSH key
+      run: |
+        echo "${{ secrets.DEV_KEY_PAIR }}" >> SpringKeyPair.pem
+        chmod 400 SpringKeyPair.pem    
     - name: Build with Maven
       run: mvn -B package --file pom.xml
     - name: Test with Maven
       run: mvn test
+    - name: Deploy to EC2
+      run: |
+        scp -i "SpringKeyPair.pem"  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.JAR_FILE }} ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
+        # SSH into the EC2 instance and restart the application
+        ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
+          cd springrolls
+          # Stop the existing application (if necessary)
+          pkill -f "java -jar springrolls-0.0.1-SNAPSHOT.jar"
+          # Start the new version of the application
+          java -jar springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
+          exit
+EOF          
