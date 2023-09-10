@@ -42,4 +42,4 @@ jobs:
           # Start the new version of the application
           java -jar springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
           exit
-EOF          
+        EOF          
