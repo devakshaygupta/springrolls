@@ -21,7 +21,7 @@ jobs:
           java-version: "17"
           distribution: "temurin"
           cache: maven
-          
+
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
@@ -46,14 +46,17 @@ jobs:
         with:
           name: springrolls-jar
 
+      - name: Checking for Artifact
+        run: |
+          if [ -f "springrolls-0.0.1-SNAPSHOT.jar" ]
+          then
+            echo "Artifact Downloaded!!"
+          fi
+
       - name: Set up SSH Key
         run: |
           echo "${{ secrets.DEV_KEY_PAIR }}" >> SpringKeyPair.pem
           chmod 400 SpringKeyPair.pem
-          
-      - name: Use Artifact
-        run: |
-          ls springrolls-0.0.1-SNAPSHOT.jar
 
       - name: Deploy to EC2
         run: |
@@ -66,8 +69,8 @@ jobs:
             cd springrolls
             echo "Stopping the existing application"
             pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar"
-            echo "Start the new version of the application"
+            echo "Starting the new version of the application"
             nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
             echo "Application Started!!!"
             exit
-            EOF
+          EOF
