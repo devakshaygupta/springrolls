@@ -23,6 +23,7 @@ jobs:
           cache: maven
 
       - name: Build with Maven
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
         run: mvn -B package --file pom.xml
 
       - name: Test with Maven
@@ -30,6 +31,7 @@ jobs:
         run: mvn test
 
       - name: Upload artifact
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
         uses: actions/upload-artifact@v2
         with:
           name: springrolls-jar
