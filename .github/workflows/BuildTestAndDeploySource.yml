@@ -12,6 +12,7 @@ on:
 jobs:
   build_test:
     name: Build and Test
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -23,7 +24,6 @@ jobs:
           cache: maven
 
       - name: Build and Test with Maven
-        if: github.event_name == 'pull_request' && github.event.action != 'closed'
         run: mvn -B package --file pom.xml
 
       - name: Configure AWS credentials
@@ -34,7 +34,6 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload artifact to S3
-        if: github.event_name == 'pull_request' && github.event.action != 'closed'
         run: |
             aws s3 cp target/springrolls-0.0.1-SNAPSHOT.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar
 
