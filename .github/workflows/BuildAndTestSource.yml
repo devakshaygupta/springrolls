@@ -35,7 +35,7 @@ jobs:
 
       - name: Upload artifact to S3
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
-        uses: aws-actions/aws-cli@v1
+        uses: aws-actions/aws-cli-setup@v1
         with:
           script: |
             aws s3 cp target/springrolls-0.0.1-SNAPSHOT.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar
@@ -54,7 +54,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Download artifact from S3
-        uses: aws-actions/aws-cli@v1
+        uses: aws-actions/aws-cli-setup@v1
         with:
           script: |
             aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar ./springrolls-0.0.1-SNAPSHOT.jar
