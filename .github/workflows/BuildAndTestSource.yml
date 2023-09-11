@@ -50,6 +50,7 @@ jobs:
         run: |
           echo "${{ secrets.DEV_KEY_PAIR }}" >> SpringKeyPair.pem
           chmod 400 SpringKeyPair.pem
+          
       - name: Use Artifact
         run: |
           ls springrolls-0.0.1-SNAPSHOT.jar
