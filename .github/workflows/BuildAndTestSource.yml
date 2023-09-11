@@ -1,45 +1,73 @@
-name: Build and Test with Maven
+name: Build Test and Deploy
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, closed]
     branches: ["main"]
     paths:
-      - "springrolls/src/**"
+      - "src/**"
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
-  build:
-
+  build_test:
+    name: Build and Test
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Set up SSH key
-      run: |
-        echo "${{ secrets.DEV_KEY_PAIR }}" >> SpringKeyPair.pem
-        chmod 400 SpringKeyPair.pem    
-    - name: Build with Maven
-      run: mvn -B package --file pom.xml
-    - name: Test with Maven
-      run: mvn test
-    - name: Deploy to EC2
-      run: |
-        scp -i "SpringKeyPair.pem"  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.JAR_FILE }} ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
-        # SSH into the EC2 instance and restart the application
-        ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
-          cd springrolls
-          # Stop the existing application (if necessary)
-          pkill -f "java -jar springrolls-0.0.1-SNAPSHOT.jar"
-          # Start the new version of the application
-          java -jar springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
-          exit
-        EOF          
+      - uses: actions/checkout@v3
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+          
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
+
+      - name: Test with Maven
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        run: mvn test
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: springrolls-jar
+          path: target/springrolls-0.0.1-SNAPSHOT.jar
+
+  deploy:
+    name: Deploy to EC2
+    needs: build_test
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: springrolls-jar
+
+      - name: Set up SSH Key
+        run: |
+          echo "${{ secrets.DEV_KEY_PAIR }}" >> SpringKeyPair.pem
+          chmod 400 SpringKeyPair.pem
+          
+      - name: Use Artifact
+        run: |
+          ls springrolls-0.0.1-SNAPSHOT.jar
+
+      - name: Deploy to EC2
+        run: |
+          echo "Copying jar to EC2 Instance..."
+          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no springrolls-0.0.1-SNAPSHOT.jar ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
+          echo "Jar Copied successfully!!!"
+          echo "Attempting logging to machine..."
+          ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
+            echo "Switching to application directory"          
+            cd springrolls
+            echo "Stopping the existing application"
+            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar"
+            echo "Start the new version of the application"
+            nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
+            echo "Application Started!!!"
+            exit
+            EOF

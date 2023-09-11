@@ -21,7 +21,7 @@
     "vscode": {
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
-        "streetsidesoftware.code-spell-checker",
+        "redhat.vscode-yaml",
         "vscjava.vscode-java-pack",
         "vmware.vscode-boot-dev-pack",
         "redhat.vscode-xml",

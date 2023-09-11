@@ -9,7 +9,10 @@
             "name": "SpringRollsApplication",
             "request": "launch",
             "mainClass": "click.akshaygupta.springrolls.SpringRollsApplication",
-            "projectName": "springrolls"
+            "projectName": "springrolls",
+            "env": {
+                "spring.config.activate.on-profile": "dev"
+            }
         }
     ]
 }
