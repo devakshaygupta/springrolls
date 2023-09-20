@@ -1,0 +1,10 @@
+{
+    "id": 2,
+    "name": "Thai Spring Rolls",
+    "ingredients": "Rice paper, tofu, peanut sauce, herbs",
+    "spiciness": "Mild",
+    "dietryType": "Veg",
+    "countryOfOrigin": "Thailand",
+    "caloriesPerPiece": 30,
+    "price": 5.49
+}

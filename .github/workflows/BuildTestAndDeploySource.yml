@@ -65,7 +65,7 @@ jobs:
           echo "Jar Copied successfully!!!"
           echo "Attempting logging to machine..."
           ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
-            echo "Switching to application directory"          
+            echo "Switching to application directory"
             cd springrolls
             echo "Stopping the existing application"
             pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar"
