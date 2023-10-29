@@ -25,39 +25,17 @@ jobs:
 
       - name: Create Table Schema and Data for Testing
         run: |
-          touch src/test/resources/schema.sql
-          cat <<EOF > src/test/resources/schema.sql
-          ${{ secrets.TABLE_SCHEMA }}
-          EOF
-          touch src/test/resources/data.sql
-          cat <<EOF > src/test/resources/data.sql
-          ${{ secrets.TEST_DATA }}
-          EOF
+            touch src/test/resources/schema.sql
+            cat <<EOF > src/test/resources/schema.sql
+            ${{ secrets.TABLE_SCHEMA }}
+            EOF
+            touch src/test/resources/data.sql
+            cat <<EOF > src/test/resources/data.sql
+            ${{ secrets.TEST_DATA }}
+            EOF
 
       - name: Build and Test with Maven
         run: mvn -B package --file pom.xml
-
-      - name: Determine New Version
-        id: determine_version
-        run: |
-          CURRENT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          # Extract the major, minor, and patch versions
-          MAJOR=$(echo $CURRENT_VERSION | cut -d'.' -f1)
-          MINOR=$(echo $CURRENT_VERSION | cut -d'.' -f2)
-          PATCH=$(echo $CURRENT_VERSION | cut -d'.' -f3)
-          # Increment the patch version
-          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Maven Release - Update Versions
-        run: mvn release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion=${{ steps.determine_version.outputs.new_version }}
-
-      - name: Rename Jar File with Release Version
-        run: |
-          release_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          mv target/springrolls-*.jar target/springrolls-${release_version}.jar
-          mkdir -p springrolls-artifact
-          echo ${release_version} > springrolls-artifact/version.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -68,8 +46,7 @@ jobs:
 
       - name: Upload artifact to S3
         run: |
-          ls target
-          aws s3 cp target/springrolls-${{ steps.determine_version.outputs.new_version }}-SNAPSHOT.jar s3://${{ secrets.S3_BUCKET }}/springrolls-${{ steps.determine_version.outputs.new_version }}-SNAPSHOT.jar
+            aws s3 cp target/springrolls-0.0.1-SNAPSHOT.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar
 
   deploy:
     name: Deploy to EC2
@@ -84,12 +61,8 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Download artifact from S3
-        id: download_artifact
         run: |
-          jar_files=$(aws s3 ls s3://YOUR_BUCKET_NAME/ | grep 'springrolls-' | grep '.jar')
-          latest_jar_file=$(echo "$jar_files" | sort -k4 | tail -n 1 | awk '{print $4}')
-          echo "springrolls_jar=${latest_jar_file}" >> $GITHUB_OUTPUT        
-          aws s3 cp s3://${{ secrets.S3_BUCKET }}/latest_jar_file ./latest_jar_file
+            aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar ./springrolls-0.0.1-SNAPSHOT.jar
 
       - name: Set up SSH Key
         run: |
@@ -99,16 +72,16 @@ jobs:
       - name: Deploy to EC2
         run: |
           echo "Copying jar to EC2 Instance..."
-          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./${{ steps.download_artifact.outputs.springrolls_jar }} ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
+          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./springrolls-0.0.1-SNAPSHOT.jar ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
           echo "Jar Copied successfully!!!"
           echo "Attempting logging to machine..."
           ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
             echo "Switching to application directory"
             cd springrolls
             echo "Stopping the existing application"
-            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/${{ steps.download_artifact.outputs.springrolls_jar }}"
+            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar"
             echo "Starting the new version of the application"
-            nohup java -jar ${{ secrets.TARGET_DIR }}/${{ steps.download_artifact.outputs.springrolls_jar }} > /dev/null 2>&1 &
+            nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
             echo "Application Started!!!"
             exit
           EOF
