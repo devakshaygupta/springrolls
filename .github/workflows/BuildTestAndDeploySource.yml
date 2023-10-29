@@ -25,17 +25,45 @@ jobs:
 
       - name: Create Table Schema and Data for Testing
         run: |
-            touch src/test/resources/schema.sql
-            cat <<EOF > src/test/resources/schema.sql
-            ${{ secrets.TABLE_SCHEMA }}
-            EOF
-            touch src/test/resources/data.sql
-            cat <<EOF > src/test/resources/data.sql
-            ${{ secrets.TEST_DATA }}
-            EOF
+          touch src/test/resources/schema.sql
+          cat <<EOF > src/test/resources/schema.sql
+          ${{ secrets.TABLE_SCHEMA }}
+          EOF
+          touch src/test/resources/data.sql
+          cat <<EOF > src/test/resources/data.sql
+          ${{ secrets.TEST_DATA }}
+          EOF
 
       - name: Build and Test with Maven
         run: mvn -B package --file pom.xml
+
+      - name: Determine New Version
+        id: determine_version
+        run: |
+          CURRENT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          # Extract the major, minor, and patch versions
+          MAJOR=$(echo $CURRENT_VERSION | cut -d'.' -f1)
+          MINOR=$(echo $CURRENT_VERSION | cut -d'.' -f2)
+          PATCH=$(echo $CURRENT_VERSION | cut -d'.' -f3)
+          # Increment the patch version
+          NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+          echo "::set-output name=new_version::$NEW_VERSION"
+
+      - name: Maven Release - Update Versions
+        run: mvn release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion=${{ steps.determine_version.outputs.new_version }}
+
+      - name: Rename Jar File with Release Version
+        run: |
+          release_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          mv target/springrolls-*.jar target/springrolls-${release_version}.jar
+          mkdir -p springrolls-artifact
+          echo ${release_version} > springrolls-artifact/version.txt
+
+      - name: Upload latest version number as an atrifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: springrolls-artifact
+          path: springrolls-artifact/version.txt
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -46,13 +74,24 @@ jobs:
 
       - name: Upload artifact to S3
         run: |
-            aws s3 cp target/springrolls-0.0.1-SNAPSHOT.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar
+          aws s3 cp target/springrolls-${{ steps.determine_version.outputs.new_version }}.jar s3://${{ secrets.S3_BUCKET }}/springrolls-${{ steps.determine_version.outputs.new_version }}.jar
 
   deploy:
     name: Deploy to EC2
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
+      - name: Download latest version number as an atrifact
+        uses: actions/download-artifact@v3
+        with:
+          name: springrolls-artifact/version.txt
+
+      - name: Determine New Version
+        id: determine_version
+        run: |
+          NEW_VERSION=$(cat springrolls-artifact/version.txt)
+          echo "::set-output name=new_version::$NEW_VERSION"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -62,7 +101,7 @@ jobs:
 
       - name: Download artifact from S3
         run: |
-            aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar ./springrolls-0.0.1-SNAPSHOT.jar
+          aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-${{ steps.determine_version.outputs.new_version }}.jar ./springrolls-${{ steps.determine_version.outputs.new_version }}.jar
 
       - name: Set up SSH Key
         run: |
