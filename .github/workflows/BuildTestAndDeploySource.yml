@@ -23,6 +23,17 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Create Table Schema and Data for Testing
+        run: |
+            touch src/test/resources/schema.sql
+            cat <<EOF > src/test/resources/schema.sql
+            ${{ secrets.TABLE_SCHEMA }}
+            EOF
+            touch src/test/resources/data.sql
+            cat <<EOF > src/test/resources/data.sql
+            ${{ secrets.TEST_DATA }}
+            EOF
+
       - name: Build and Test with Maven
         run: mvn -B package --file pom.xml
 
@@ -65,7 +76,7 @@ jobs:
           echo "Jar Copied successfully!!!"
           echo "Attempting logging to machine..."
           ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
-            echo "Switching to application directory"          
+            echo "Switching to application directory"
             cd springrolls
             echo "Stopping the existing application"
             pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar"

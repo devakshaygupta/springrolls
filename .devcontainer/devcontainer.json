@@ -26,7 +26,8 @@
         "vmware.vscode-boot-dev-pack",
         "redhat.vscode-xml",
         "redhat.fabric8-analytics",
-        "HTMLHint.vscode-htmlhint"
+        "HTMLHint.vscode-htmlhint",
+        "DavidAnson.vscode-markdownlint"
       ]
     }
   }
