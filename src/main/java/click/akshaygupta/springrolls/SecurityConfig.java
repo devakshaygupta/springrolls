@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .username("jackdoe")
                 .password(passwordEncoder.encode("def456"))
                 .roles("Owner")
-                .build();                
+                .build();
         return new InMemoryUserDetailsManager(john, jack);
     }
 

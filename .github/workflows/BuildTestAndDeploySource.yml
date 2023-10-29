@@ -86,10 +86,7 @@ jobs:
       - name: Download artifact from S3
         id: download_artifact
         run: |
-          # List files matching the pattern 'springrolls-*.jar' in the S3 bucket
           jar_files=$(aws s3 ls s3://YOUR_BUCKET_NAME/ | grep 'springrolls-' | grep '.jar')
-
-          # Sort the files by the last modified timestamp in ascending order
           latest_jar_file=$(echo "$jar_files" | sort -k4 | tail -n 1 | awk '{print $4}')
           echo "springrolls_jar=${latest_jar_file}" >> $GITHUB_OUTPUT        
           aws s3 cp s3://${{ secrets.S3_BUCKET }}/latest_jar_file ./latest_jar_file
