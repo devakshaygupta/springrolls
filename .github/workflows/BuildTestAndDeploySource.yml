@@ -59,12 +59,6 @@ jobs:
           mkdir -p springrolls-artifact
           echo ${release_version} > springrolls-artifact/version.txt
 
-      - name: Upload latest version number as an atrifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: springrolls-artifact
-          path: springrolls-artifact/version.txt
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -82,17 +76,6 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Download latest version number as an atrifact
-        uses: actions/download-artifact@v3
-        with:
-          name: springrolls-artifact/version.txt
-
-      - name: Determine New Version
-        id: determine_version
-        run: |
-          NEW_VERSION=$(cat springrolls-artifact/version.txt)
-          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -101,8 +84,15 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Download artifact from S3
+        id: download_artifact
         run: |
-          aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-${{ steps.determine_version.outputs.new_version }}-SNAPSHOT.jar ./springrolls-${{ steps.determine_version.outputs.new_version }}-SNAPSHOT.jar
+          # List files matching the pattern 'springrolls-*.jar' in the S3 bucket
+          jar_files=$(aws s3 ls s3://YOUR_BUCKET_NAME/ | grep 'springrolls-' | grep '.jar')
+
+          # Sort the files by the last modified timestamp in ascending order
+          latest_jar_file=$(echo "$jar_files" | sort -k4 | tail -n 1 | awk '{print $4}')
+          echo "springrolls_jar=${latest_jar_file}" >> $GITHUB_OUTPUT        
+          aws s3 cp s3://${{ secrets.S3_BUCKET }}/latest_jar_file ./latest_jar_file
 
       - name: Set up SSH Key
         run: |
@@ -112,16 +102,16 @@ jobs:
       - name: Deploy to EC2
         run: |
           echo "Copying jar to EC2 Instance..."
-          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./springrolls-${{ steps.determine_version.outputs.new_version }}-SNAPSHOT.jar ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
+          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./${{ steps.download_artifact.outputs.springrolls_jar }} ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
           echo "Jar Copied successfully!!!"
           echo "Attempting logging to machine..."
           ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
             echo "Switching to application directory"
             cd springrolls
             echo "Stopping the existing application"
-            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-${{ steps.determine_version.outputs.new_version }}-SNAPSHOT.jar"
+            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/${{ steps.download_artifact.outputs.springrolls_jar }}"
             echo "Starting the new version of the application"
-            nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-${{ steps.determine_version.outputs.new_version }}-SNAPSHOT.jar > /dev/null 2>&1 &
+            nohup java -jar ${{ secrets.TARGET_DIR }}/${{ steps.download_artifact.outputs.springrolls_jar }} > /dev/null 2>&1 &
             echo "Application Started!!!"
             exit
           EOF
