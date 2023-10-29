@@ -115,8 +115,10 @@ public class SpringRollsControllerTest {
         DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
         Number id = documentContext.read("$.id");
         String dietryType = documentContext.read("$.dietryType");
+        Number caloriesPerPiece = documentContext.read("$.caloriesPerPiece");
 
         Assertions.assertThat(id).isNotNull();
         Assertions.assertThat(dietryType).isEqualTo("Veg");
+        Assertions.assertThat(caloriesPerPiece).isEqualTo(40);
     }
 }
