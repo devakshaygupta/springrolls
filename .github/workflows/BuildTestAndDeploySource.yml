@@ -23,6 +23,13 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Create Table Schema and Data for Testing
+        run: |
+            touch src/test/resources/schema.sql
+            cat ${{ secrets.TABLE_SCHEMA }} >> src/test/resources/schema.sql
+            touch src/test/resources/data.sql
+            cat ${{ secrets.TEST_DATA }} >> src/test/resources/data.sql
+
       - name: Build and Test with Maven
         run: mvn -B package --file pom.xml
 
