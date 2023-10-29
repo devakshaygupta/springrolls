@@ -26,9 +26,13 @@ jobs:
       - name: Create Table Schema and Data for Testing
         run: |
             touch src/test/resources/schema.sql
-            cat ${{ secrets.TABLE_SCHEMA }} >> src/test/resources/schema.sql
+            cat <<EOF > src/test/resources/schema.sql
+            ${{ secrets.${{ secrets.TABLE_SCHEMA }} }}
+            EOF
             touch src/test/resources/data.sql
-            cat ${{ secrets.TEST_DATA }} >> src/test/resources/data.sql
+            cat <<EOF > src/test/resources/data.sql
+            ${{ secrets.${{ secrets.TEST_DATA }} }}
+            EOF
 
       - name: Build and Test with Maven
         run: mvn -B package --file pom.xml
