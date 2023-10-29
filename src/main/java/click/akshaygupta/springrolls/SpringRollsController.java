@@ -24,7 +24,8 @@ public class SpringRollsController {
 
     @GetMapping("/{id}")
     public ResponseEntity<SpringRoll> findSpringRollById(@PathVariable Long id, Principal principal) {
-        Optional<SpringRoll> springRollOptional = Optional.ofNullable(springRollRepository.findByIdAndOwner(id, principal.getName()));
+        Optional<SpringRoll> springRollOptional = Optional
+                .ofNullable(springRollRepository.findByIdAndOwner(id, principal.getName()));
         if (springRollOptional.isPresent()) {
             return ResponseEntity.ok(springRollOptional.get());
         }
