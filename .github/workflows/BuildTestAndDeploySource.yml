@@ -47,7 +47,7 @@ jobs:
           PATCH=$(echo $CURRENT_VERSION | cut -d'.' -f3)
           # Increment the patch version
           NEW_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-          echo "::set-output name=new_version::$NEW_VERSION"
+          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Maven Release - Update Versions
         run: mvn release:update-versions -DautoVersionSubmodules=true -DdevelopmentVersion=${{ steps.determine_version.outputs.new_version }}
@@ -74,6 +74,7 @@ jobs:
 
       - name: Upload artifact to S3
         run: |
+          ls target
           aws s3 cp target/springrolls-${{ steps.determine_version.outputs.new_version }}.jar s3://${{ secrets.S3_BUCKET }}/springrolls-${{ steps.determine_version.outputs.new_version }}.jar
 
   deploy:
@@ -90,7 +91,7 @@ jobs:
         id: determine_version
         run: |
           NEW_VERSION=$(cat springrolls-artifact/version.txt)
-          echo "::set-output name=new_version::$NEW_VERSION"
+          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -111,16 +112,16 @@ jobs:
       - name: Deploy to EC2
         run: |
           echo "Copying jar to EC2 Instance..."
-          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./springrolls-0.0.1-SNAPSHOT.jar ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
+          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./springrolls-${{ steps.determine_version.outputs.new_version }}.jar ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
           echo "Jar Copied successfully!!!"
           echo "Attempting logging to machine..."
           ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
             echo "Switching to application directory"
             cd springrolls
             echo "Stopping the existing application"
-            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar"
+            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-${{ steps.determine_version.outputs.new_version }}.jar"
             echo "Starting the new version of the application"
-            nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
+            nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-${{ steps.determine_version.outputs.new_version }}.jar > /dev/null 2>&1 &
             echo "Application Started!!!"
             exit
           EOF
