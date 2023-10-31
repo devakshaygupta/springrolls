@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: "${{ secrets.DATABASE_ENDPOINT }}"
-    username: "${{ secrets.DATABASE_USER_NAME }}"
-    password: "${{ secrets.DATABASE_PASSWORD }}"
+    url: ${DATABASE_ENDPOINT}
+    username: ${DATABASE_USER_NAME}
+    password: ${DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
