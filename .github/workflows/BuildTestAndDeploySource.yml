@@ -50,7 +50,7 @@ jobs:
 
       - name: Upload artifact to S3
         run: |
-            aws s3 cp target/springrolls-0.0.1-SNAPSHOT.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar
+            aws s3 cp target/springrolls-0.0.1.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1.jar
 
   deploy:
     name: Deploy to EC2
@@ -66,7 +66,7 @@ jobs:
 
       - name: Download artifact from S3
         run: |
-            aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1-SNAPSHOT.jar ./springrolls-0.0.1-SNAPSHOT.jar
+            aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1.jar ./springrolls-0.0.1.jar
 
       - name: Set up SSH Key
         run: |
@@ -76,16 +76,16 @@ jobs:
       - name: Deploy to EC2
         run: |
           echo "Copying jar to EC2 Instance..."
-          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./springrolls-0.0.1-SNAPSHOT.jar ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
+          scp -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ./springrolls-0.0.1.jar ${{ secrets.DEV_INSTANCE_IP }}:${{ secrets.TARGET_DIR }}
           echo "Jar Copied successfully!!!"
           echo "Attempting logging to machine..."
           ssh -i "SpringKeyPair.pem" -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${{ secrets.DEV_INSTANCE_IP }} <<EOF
             echo "Switching to application directory"
             cd springrolls
             echo "Stopping the existing application"
-            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar"
+            pkill -f "java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1.jar"
             echo "Starting the new version of the application"
-            nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
+            nohup java -jar ${{ secrets.TARGET_DIR }}/springrolls-0.0.1.jar > /dev/null 2>&1 &
             echo "Application Started!!!"
             exit
           EOF
