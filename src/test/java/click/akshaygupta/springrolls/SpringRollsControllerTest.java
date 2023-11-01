@@ -68,7 +68,7 @@ public class SpringRollsControllerTest {
         Principal principal = (Principal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        ResponseEntity<String> response = restTemplate.withBasicAuth(principal.getName(), (String) authentication.getCredentials()).getForEntity("/springrolls/4",
+        ResponseEntity<String> response = restTemplate.withBasicAuth(principal.getName(), (String) authentication.getCredentials()).getForEntity("/springrolls/5",
                 String.class);
 
         Assertions.assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
