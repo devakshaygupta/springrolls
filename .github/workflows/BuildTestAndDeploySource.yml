@@ -29,14 +29,20 @@ jobs:
 
       - name: Create Table Schema and Data for Testing
         run: |
-            touch src/test/resources/schema.sql
-            cat <<EOF > src/test/resources/schema.sql
-            ${{ secrets.TABLE_SCHEMA }}
-            EOF
-            touch src/test/resources/data.sql
-            cat <<EOF > src/test/resources/data.sql
-            ${{ secrets.TEST_DATA }}
-            EOF
+          touch src/test/resources/schema.sql
+          cat <<EOF > src/test/resources/schema.sql
+          ${{ secrets.TABLE_SCHEMA }}
+          EOF
+          touch src/test/resources/data.sql
+          cat <<EOF > src/test/resources/data.sql
+          ${{ secrets.TEST_DATA }}
+          EOF
+
+      - name: Replace environment variables in application.yaml
+        run: |
+          sed -i "s|\${DATABASE_ENDPOINT}|$DATABASE_ENDPOINT|g" src/main/resources/application.yaml
+          sed -i "s|\${DATABASE_USER_NAME}|$DATABASE_USER_NAME|g" src/main/resources/application.yaml
+          sed -i "s|\${DATABASE_PASSWORD}|$DATABASE_PASSWORD|g" src/main/resources/application.yaml          
 
       - name: Build and Test with Maven
         run: mvn -B package --file pom.xml
@@ -50,7 +56,7 @@ jobs:
 
       - name: Upload artifact to S3
         run: |
-            aws s3 cp target/springrolls-0.0.1.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1.jar
+          aws s3 cp target/springrolls-0.0.1.jar s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1.jar
 
   deploy:
     name: Deploy to EC2
@@ -66,7 +72,7 @@ jobs:
 
       - name: Download artifact from S3
         run: |
-            aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1.jar ./springrolls-0.0.1.jar
+          aws s3 cp s3://${{ secrets.S3_BUCKET }}/springrolls-0.0.1.jar ./springrolls-0.0.1.jar
 
       - name: Set up SSH Key
         run: |
